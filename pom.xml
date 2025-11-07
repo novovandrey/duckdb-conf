@@ -55,11 +55,7 @@
                 <artifactId>parquet-column</artifactId>
                 <version>${parquet.version}</version>
             </dependency>
-            <dependency>
-                <groupId>org.apache.parquet</groupId>
-                <artifactId>parquet-example</artifactId>
-                <version>${parquet.version}</version>
-            </dependency>
+
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
