@@ -1,7 +1,7 @@
 package dev.novov.duckdb.runner;
 
 import dev.novov.duckdb.bench.api.AnalyticsEngine;
-import dev.novov.duckdb.engines.duckdb.DuckdbEngine;
+import dev.novov.duckdb.engines.DuckdbEngine;
 import dev.novov.duckdb.engines.parquet.ParquetEngine;
 
 import java.util.List;

@@ -10,6 +10,7 @@ import org.apache.parquet.hadoop.util.HadoopInputFile;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.PrimitiveType;
 import org.apache.parquet.schema.Type;
+import org.apache.parquet.hadoop.api.ReadSupport;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -48,8 +49,7 @@ final class ParquetScanner implements AutoCloseable {
         Configuration conf = new Configuration();
         Path path = new Path(file);
         Projection projection = prepareProjection(path, conf, requestedColumns);
-        GroupReadSupport.setSchema(conf, projection.fileSchema());
-        GroupReadSupport.setRequestedProjection(conf, projection.projectedSchema());
+        conf.set(ReadSupport.PARQUET_READ_SCHEMA, projection.projectedSchema().toString());
         ParquetReader<Group> reader = ParquetReader.builder(new GroupReadSupport(), path)
                 .withConf(conf)
                 .build();
