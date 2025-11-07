@@ -2,6 +2,7 @@ package dev.novov.duckdb.runner;
 
 import dev.novov.duckdb.bench.api.QueryCase;
 import dev.novov.duckdb.bench.cases.BuiltinCases;
+import dev.novov.duckdb.bench.cases.BuiltinCasesPPD;
 import dev.novov.duckdb.bench.util.Files2;
 
 import java.nio.file.Path;
@@ -13,9 +14,11 @@ import java.util.Locale;
 import java.util.Set;
 
 final class CaseSelector {
-    List<QueryCase> select(String filter, String file) {
+    List<QueryCase> select(DatasetOption dataset, String filter, String file) {
         validateFile(file);
-        List<QueryCase> cases = BuiltinCases.chicagoTaxiCases(file);
+        List<QueryCase> cases = dataset == DatasetOption.PPD
+                ? BuiltinCasesPPD.all(file)
+                : BuiltinCases.chicagoTaxiCases(file);
         if (filter == null || filter.equalsIgnoreCase("all")) {
             return cases;
         }

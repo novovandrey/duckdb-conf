@@ -22,6 +22,7 @@
         <dependency>
             <groupId>org.duckdb</groupId>
             <artifactId>duckdb_jdbc</artifactId>
+            <version>${duckdb.jdbc.version}</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>

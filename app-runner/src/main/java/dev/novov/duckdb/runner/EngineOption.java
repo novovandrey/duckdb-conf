@@ -30,4 +30,12 @@ enum EngineOption {
     public String toString() {
         return cliName;
     }
+
+    boolean includesDuckdb() {
+        return this == DUCKDB || this == BOTH;
+    }
+
+    boolean includesParquet() {
+        return this == PARQUET || this == BOTH;
+    }
 }

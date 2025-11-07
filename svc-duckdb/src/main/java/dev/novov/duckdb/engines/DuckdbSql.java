@@ -1,22 +1,29 @@
 package dev.novov.duckdb.engines;
 
 import dev.novov.duckdb.bench.api.AggFn;
+import dev.novov.duckdb.bench.api.AvgByDistrictCase;
+import dev.novov.duckdb.bench.api.DescribeCase;
 import dev.novov.duckdb.bench.api.FilterCase;
 import dev.novov.duckdb.bench.api.GroupByCase;
+import dev.novov.duckdb.bench.api.GroupByYearCase;
+import dev.novov.duckdb.bench.api.HeadCase;
+import dev.novov.duckdb.bench.api.MedianByDistrictCase;
+import dev.novov.duckdb.bench.api.NewBuildVsOldCase;
 import dev.novov.duckdb.bench.api.QueryCase;
 import dev.novov.duckdb.bench.api.RunConfig;
 import dev.novov.duckdb.bench.api.TopKCase;
+import dev.novov.duckdb.bench.util.Paths2;
+import dev.novov.duckdb.engines.duck.DuckSqlPPD;
+
+import static dev.novov.duckdb.bench.ppd.LabelsPPD.IS_NEW_BUILD;
+import static dev.novov.duckdb.bench.ppd.LabelsPPD.headProjection;
 
 final class DuckdbSql {
     private DuckdbSql() {
     }
 
     static String build(QueryCase queryCase, RunConfig config) {
-        String core = switch (queryCase) {
-            case GroupByCase groupByCase -> groupBy(groupByCase);
-            case FilterCase filterCase -> filter(filterCase);
-            case TopKCase topKCase -> topK(topKCase);
-        };
+        String core = buildCore(queryCase);
         if (config.limitRowsOrMinusOne() > 0) {
             core = "SELECT * FROM (" + core + ") AS duck_query LIMIT " + config.limitRowsOrMinusOne();
         }
@@ -26,16 +33,110 @@ final class DuckdbSql {
         return core;
     }
 
-    static String caseFile(QueryCase queryCase) {
-        return switch (queryCase) {
-            case GroupByCase groupByCase -> groupByCase.file();
-            case FilterCase filterCase -> filterCase.file();
-            case TopKCase topKCase -> topKCase.file();
-        };
+    private static String buildCore(QueryCase queryCase) {
+        if (isPpdCase(queryCase)) {
+            return buildPpd(queryCase);
+        }
+        if (queryCase instanceof GroupByCase groupByCase) {
+            return groupBy(groupByCase);
+        }
+        if (queryCase instanceof FilterCase filterCase) {
+            return filter(filterCase);
+        }
+        if (queryCase instanceof TopKCase topKCase) {
+            return topK(topKCase);
+        }
+        throw new IllegalArgumentException("Unsupported QueryCase: " + queryCase.getClass().getName());
     }
 
-    static boolean isRemoteFile(String file) {
-        return file.startsWith("http://") || file.startsWith("https://");
+    private static boolean isPpdCase(QueryCase queryCase) {
+        return queryCase instanceof DescribeCase
+                || queryCase instanceof HeadCase
+                || queryCase instanceof GroupByYearCase
+                || queryCase instanceof AvgByDistrictCase
+                || queryCase instanceof NewBuildVsOldCase
+                || queryCase instanceof MedianByDistrictCase;
+    }
+
+    private static String buildPpd(QueryCase queryCase) {
+        String file = Paths2.normalizePathOrUrl(ppdFile(queryCase));
+        String from = " FROM " + DuckSqlPPD.fromCsv(file) + " ";
+        if (queryCase instanceof DescribeCase) {
+            return "DESCRIBE SELECT * " + from + " LIMIT 0";
+        }
+        if (queryCase instanceof HeadCase headCase) {
+            int limit = Math.max(1, headCase.limit());
+            return "SELECT " + headProjection() + from + " LIMIT " + limit;
+        }
+        if (queryCase instanceof GroupByYearCase) {
+            return """
+                    SELECT strftime('%Y', transfer_date) AS year,
+                           COUNT(*) AS sales,
+                           ROUND(AVG(price)) AS avg_price
+                    """ + from + """
+                    WHERE ppd_category = 'A'
+                    GROUP BY year
+                    ORDER BY year
+                    """;
+        }
+        if (queryCase instanceof AvgByDistrictCase avgByDistrictCase) {
+            return """
+                    SELECT district,
+                           COUNT(*) AS n,
+                           ROUND(AVG(price)) AS avg_price
+                    """ + from + """
+                    WHERE ppd_category = 'A'
+                    GROUP BY district
+                    HAVING n > """ + avgByDistrictCase.minCount() + """
+                    ORDER BY avg_price DESC
+                    """;
+        }
+        if (queryCase instanceof NewBuildVsOldCase) {
+            return """
+                    SELECT """ + IS_NEW_BUILD + """ AS is_new_build,
+                           COUNT(*) AS n,
+                           ROUND(AVG(price)) AS avg_price
+                    """ + from + """
+                    WHERE ppd_category = 'A'
+                    GROUP BY is_new_build
+                    ORDER BY n DESC
+                    """;
+        }
+        if (queryCase instanceof MedianByDistrictCase medianByDistrictCase) {
+            return """
+                    SELECT district,
+                           quantile_cont(price, 0.5) AS median_price,
+                           COUNT(*) AS n
+                    """ + from + """
+                    WHERE ppd_category = 'A'
+                    GROUP BY district
+                    HAVING n > """ + medianByDistrictCase.minCount() + """
+                    ORDER BY median_price DESC
+                    LIMIT """ + medianByDistrictCase.limit();
+        }
+        throw new IllegalArgumentException("Unsupported PPD case: " + queryCase.getClass().getName());
+    }
+
+    private static String ppdFile(QueryCase queryCase) {
+        if (queryCase instanceof DescribeCase describeCase) {
+            return describeCase.file();
+        }
+        if (queryCase instanceof HeadCase headCase) {
+            return headCase.file();
+        }
+        if (queryCase instanceof GroupByYearCase groupByYearCase) {
+            return groupByYearCase.file();
+        }
+        if (queryCase instanceof AvgByDistrictCase avgByDistrictCase) {
+            return avgByDistrictCase.file();
+        }
+        if (queryCase instanceof NewBuildVsOldCase newBuildVsOldCase) {
+            return newBuildVsOldCase.file();
+        }
+        if (queryCase instanceof MedianByDistrictCase medianByDistrictCase) {
+            return medianByDistrictCase.file();
+        }
+        throw new IllegalArgumentException("Unsupported PPD case: " + queryCase.getClass().getName());
     }
 
     private static String groupBy(GroupByCase groupBy) {

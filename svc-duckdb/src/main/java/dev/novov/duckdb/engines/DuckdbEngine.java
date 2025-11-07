@@ -5,9 +5,12 @@ import dev.novov.duckdb.bench.api.CaseResult;
 import dev.novov.duckdb.bench.api.CaseRun;
 import dev.novov.duckdb.bench.api.QueryCase;
 import dev.novov.duckdb.bench.api.RunConfig;
+import dev.novov.duckdb.bench.util.AsciiTable;
 import dev.novov.duckdb.bench.util.GC;
 import dev.novov.duckdb.bench.util.MemoryUtil;
+import dev.novov.duckdb.bench.util.Paths2;
 import dev.novov.duckdb.bench.util.Stopwatch;
+import dev.novov.duckdb.engines.duck.DuckSqlPPD;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +36,7 @@ public final class DuckdbEngine implements AnalyticsEngine {
     @Override
     public CaseResult run(QueryCase queryCase, RunConfig config) throws Exception {
         try (Connection connection = DriverManager.getConnection("jdbc:duckdb:")) {
-            configureConnection(connection, queryCase, config);
+            configureConnection(connection, config);
             String sql = DuckdbSql.build(queryCase, config);
             LOGGER.info("[duckdb] Case {} SQL:{}{}", queryCase.id(), System.lineSeparator(), sql);
 
@@ -53,14 +56,51 @@ public final class DuckdbEngine implements AnalyticsEngine {
         }
     }
 
-    private void configureConnection(Connection connection, QueryCase queryCase, RunConfig config) throws SQLException {
+    public void runInteractive(QueryCase queryCase, RunConfig config) throws Exception {
+        try (Connection connection = DriverManager.getConnection("jdbc:duckdb:")) {
+            configureConnection(connection, config);
+            String sql = DuckdbSql.build(queryCase, config);
+            LOGGER.info("[duckdb] Running interactive query {} SQL:{}{}", queryCase.id(), System.lineSeparator(), sql);
+            try (Statement statement = connection.createStatement()) {
+                boolean hasResult = statement.execute(sql);
+                while (hasResult) {
+                    try (ResultSet rs = statement.getResultSet()) {
+                        printResultSet(rs);
+                    }
+                    hasResult = statement.getMoreResults();
+                }
+            }
+        }
+    }
+
+    public void csvToParquet(String csvFileOrUrl, String outParquet, int threads) throws SQLException {
+        RunConfig config = new RunConfig(0, 1, threads, -1, false, false);
+        try (Connection connection = DriverManager.getConnection("jdbc:duckdb:")) {
+            configureConnection(connection, config);
+            csvToParquet(connection, csvFileOrUrl, outParquet);
+        }
+    }
+
+    public void csvToParquet(Connection conn, String csvFileOrUrl, String outParquet) throws SQLException {
+        String in = Paths2.normalizePathOrUrl(csvFileOrUrl);
+        String out = Paths2.normalizePathOrUrl(outParquet);
+        String sql = "COPY (SELECT * FROM " + DuckSqlPPD.fromCsv(in) + ") "
+                + "TO '" + escape(out) + "' (FORMAT PARQUET)";
+        try (Statement s = conn.createStatement()) {
+            s.execute(sql);
+        }
+    }
+
+    private static String escape(String raw) {
+        return raw.replace("'", "''");
+    }
+
+    private void configureConnection(Connection connection, RunConfig config) throws SQLException {
         try (Statement statement = connection.createStatement()) {
-            int threads = Math.max(1, config.threads());
-            statement.execute("PRAGMA threads = " + threads);
-            String file = DuckdbSql.caseFile(queryCase);
-            if (DuckdbSql.isRemoteFile(file)) {
-                statement.execute("INSTALL httpfs");
-                statement.execute("LOAD httpfs");
+            statement.execute("INSTALL httpfs;");
+            statement.execute("LOAD httpfs;");
+            if (config.threads() > 0) {
+                statement.execute("PRAGMA threads=" + config.threads());
             }
             if (config.explain()) {
                 statement.execute("PRAGMA enable_profiling = 'json'");
@@ -111,5 +151,26 @@ public final class DuckdbEngine implements AnalyticsEngine {
             }
         }
         return rows;
+    }
+
+    private static void printResultSet(ResultSet rs) throws SQLException {
+        ResultSetMetaData metaData = rs.getMetaData();
+        int columns = metaData.getColumnCount();
+        if (columns == 0) {
+            return;
+        }
+        List<String> headers = new ArrayList<>(columns);
+        for (int i = 1; i <= columns; i++) {
+            headers.add(metaData.getColumnLabel(i));
+        }
+        AsciiTable table = new AsciiTable(headers);
+        while (rs.next()) {
+            Object[] row = new Object[columns];
+            for (int i = 1; i <= columns; i++) {
+                row[i - 1] = rs.getString(i);
+            }
+            table.addRow(row);
+        }
+        System.out.println(table.render());
     }
 }

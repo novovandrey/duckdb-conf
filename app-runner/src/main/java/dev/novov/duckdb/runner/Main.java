@@ -14,6 +14,9 @@ public final class Main implements Runnable {
     @CommandLine.Option(names = "--engine", description = "Engine to run: duckdb|parquet|both", defaultValue = "both")
     private String engineOption;
 
+    @CommandLine.Option(names = "--dataset", description = "Dataset to run: taxi|ppd", defaultValue = "taxi")
+    private String datasetOption;
+
     @CommandLine.Option(names = "--case", description = "Case id or 'all'", defaultValue = "all")
     private String caseFilter;
 
@@ -35,6 +38,15 @@ public final class Main implements Runnable {
     @CommandLine.Option(names = "--limitRows", description = "Limit rows processed (default unlimited)", defaultValue = "-1")
     private long limitRows;
 
+    @CommandLine.Option(names = "--schema", description = "Describe schema (PPD only) and exit")
+    private boolean schemaOnly;
+
+    @CommandLine.Option(names = "--head", description = "Print first N rows (PPD only) and exit", defaultValue = "0", paramLabel = "N")
+    private int head;
+
+    @CommandLine.Option(names = "--to-parquet", description = "Convert CSV to Parquet and exit", paramLabel = "FILE")
+    private String toParquet;
+
     public static void main(String[] args) {
         int exit = new CommandLine(new Main()).execute(args);
         System.exit(exit);
@@ -52,6 +64,7 @@ public final class Main implements Runnable {
 
     private RunnerOptions buildOptions() {
         EngineOption engine = EngineOption.from(engineOption);
+        DatasetOption dataset = DatasetOption.from(datasetOption);
         int resolvedThreads = threads <= 0 ? Runtime.getRuntime().availableProcessors() : threads;
         if (resolvedThreads < 1) {
             throw new IllegalArgumentException("threads must be >= 1");
@@ -62,6 +75,32 @@ public final class Main implements Runnable {
         if (runs < 1) {
             throw new IllegalArgumentException("runs must be >= 1");
         }
-        return new RunnerOptions(engine, caseFilter, file, resolvedThreads, warmups, runs, explain, limitRows);
+        if (head < 0) {
+            throw new IllegalArgumentException("--head must be >= 0");
+        }
+        if (schemaOnly && head > 0) {
+            throw new IllegalArgumentException("--schema cannot be combined with --head");
+        }
+        String normalizedToParquet = (toParquet == null || toParquet.isBlank()) ? null : toParquet;
+        if (normalizedToParquet != null && (schemaOnly || head > 0)) {
+            throw new IllegalArgumentException("--to-parquet cannot be combined with --schema or --head");
+        }
+        if ((schemaOnly || head > 0) && !dataset.isPpd()) {
+            throw new IllegalArgumentException("--schema/head are only supported for the PPD dataset");
+        }
+        return new RunnerOptions(
+                engine,
+                dataset,
+                caseFilter,
+                file,
+                resolvedThreads,
+                warmups,
+                runs,
+                explain,
+                limitRows,
+                schemaOnly,
+                head,
+                normalizedToParquet
+        );
     }
 }
