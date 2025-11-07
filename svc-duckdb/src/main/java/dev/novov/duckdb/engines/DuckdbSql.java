@@ -49,7 +49,7 @@ final class DuckdbSql {
 
     private static String buildPpd(QueryCase queryCase) {
         String file = Paths2.normalizePathOrUrl(ppdFile(queryCase));
-        String from = " FROM " + DuckSqlPPD.fromCsv(file) + " ";
+        String from = " FROM " + DuckSqlPPD.fromParquet(file) + " ";
         if (queryCase instanceof DescribeCase) {
             return "DESCRIBE SELECT * " + from + " LIMIT 0";
         }

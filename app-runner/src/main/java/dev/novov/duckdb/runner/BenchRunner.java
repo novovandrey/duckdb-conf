@@ -34,9 +34,9 @@ final class BenchRunner {
             return;
         }
 
-        if (options.datasetOption().isPpd() && options.engineOption() != EngineOption.DUCKDB) {
-            throw new IllegalArgumentException("PPD dataset is currently supported only with --engine duckdb");
-        }
+//        if (options.datasetOption().isPpd() && options.engineOption() != EngineOption.DUCKDB) {
+//            throw new IllegalArgumentException("PPD dataset is currently supported only with --engine duckdb");
+//        }
 
         if (options.engineOption().includesParquet() && isCsv(options.file())) {
             System.err.println("Parquet engine cannot read CSV input directly. Run --to-parquet first.");

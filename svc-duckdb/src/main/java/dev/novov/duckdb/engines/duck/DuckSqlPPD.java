@@ -10,6 +10,10 @@ public final class DuckSqlPPD {
         return "read_csv_auto('" + escape(fileOrUrl) + "', HEADER=false, " + ColumnsPPD.COLUMNS_SQL_MAP + ")";
     }
 
+    public static String fromParquet(String fileOrUrl) {
+        return "read_parquet('" + escape(fileOrUrl) + "')";
+    }
+
     private static String escape(String location) {
         return location.replace("'", "''");
     }
