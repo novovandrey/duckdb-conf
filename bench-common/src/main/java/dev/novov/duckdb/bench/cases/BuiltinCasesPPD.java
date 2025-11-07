@@ -1,11 +1,7 @@
 package dev.novov.duckdb.bench.cases;
 
-import dev.novov.duckdb.bench.api.AvgByDistrictCase;
-import dev.novov.duckdb.bench.api.DescribeCase;
-import dev.novov.duckdb.bench.api.GroupByYearCase;
-import dev.novov.duckdb.bench.api.HeadCase;
-import dev.novov.duckdb.bench.api.MedianByDistrictCase;
-import dev.novov.duckdb.bench.api.NewBuildVsOldCase;
+
+import dev.novov.duckdb.bench.api.*;
 import dev.novov.duckdb.bench.api.QueryCase;
 
 import java.util.List;

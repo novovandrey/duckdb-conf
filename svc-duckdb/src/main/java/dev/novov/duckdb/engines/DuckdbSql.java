@@ -1,17 +1,6 @@
 package dev.novov.duckdb.engines;
 
-import dev.novov.duckdb.bench.api.AggFn;
-import dev.novov.duckdb.bench.api.AvgByDistrictCase;
-import dev.novov.duckdb.bench.api.DescribeCase;
-import dev.novov.duckdb.bench.api.FilterCase;
-import dev.novov.duckdb.bench.api.GroupByCase;
-import dev.novov.duckdb.bench.api.GroupByYearCase;
-import dev.novov.duckdb.bench.api.HeadCase;
-import dev.novov.duckdb.bench.api.MedianByDistrictCase;
-import dev.novov.duckdb.bench.api.NewBuildVsOldCase;
-import dev.novov.duckdb.bench.api.QueryCase;
-import dev.novov.duckdb.bench.api.RunConfig;
-import dev.novov.duckdb.bench.api.TopKCase;
+import dev.novov.duckdb.bench.api.*;
 import dev.novov.duckdb.bench.util.Paths2;
 import dev.novov.duckdb.engines.duck.DuckSqlPPD;
 
@@ -93,7 +82,9 @@ final class DuckdbSql {
         }
         if (queryCase instanceof NewBuildVsOldCase) {
             return """
-                    SELECT """ + IS_NEW_BUILD + """ AS is_new_build,
+                    SELECT
+                    """ + IS_NEW_BUILD +    """
+                    AS is_new_build,
                            COUNT(*) AS n,
                            ROUND(AVG(price)) AS avg_price
                     """ + from + """

@@ -53,6 +53,7 @@ public final class ParquetEngine implements AnalyticsEngine {
             case GroupByCase groupBy -> groupByExecutor.execute(groupBy, config);
             case FilterCase filter -> filterExecutor.execute(filter, config);
             case TopKCase topK -> topKExecutor.execute(topK, config);
+            default -> throw new IllegalStateException("Unexpected value: " + queryCase);
         };
     }
 }
