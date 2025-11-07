@@ -48,7 +48,7 @@ final class ParquetScanner implements AutoCloseable {
         Configuration conf = new Configuration();
         Path path = new Path(file);
         Projection projection = prepareProjection(path, conf, requestedColumns);
-        GroupReadSupport.setSchema(projection.fileSchema(), conf);
+        GroupReadSupport.setSchema(conf, projection.fileSchema());
         GroupReadSupport.setRequestedProjection(conf, projection.projectedSchema());
         ParquetReader<Group> reader = ParquetReader.builder(new GroupReadSupport(), path)
                 .withConf(conf)
