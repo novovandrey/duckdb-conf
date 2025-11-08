@@ -19,7 +19,7 @@ final class ResultTablePrinter {
         }
         results.sort(Comparator.comparing((BenchRunner.BenchResult r) -> r.queryCase().id())
                 .thenComparing(BenchRunner.BenchResult::engine));
-        AsciiTable table = new AsciiTable(List.of("Case", "Engine", "Runs", "Median(ms)", "RowsOut", "Rows/s", "MaxMem(MB)"));
+        AsciiTable table = new AsciiTable(List.of("Case", "Engine", "Warmups/Runs", "Median(ms)", "RowsOut", "Rows/s", "MaxMem(MB)"));
         for (BenchRunner.BenchResult result : results) {
             long medianMillis = result.result().medianMillis();
             long rowsOut = rowsOut(result);

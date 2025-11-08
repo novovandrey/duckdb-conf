@@ -24,6 +24,10 @@ public final class PpdSalesByYearExecutor {
         Map<Integer, Agg> byYear = new HashMap<>(256);
 
         Configuration conf = new Configuration(false);
+        conf.setBoolean("parquet.filter.statistics.enabled", true);
+        conf.setBoolean("parquet.filter.dictionary.enabled", true);
+        conf.setBoolean("parquet.filter.columnindex.enabled", true);
+        conf.setBoolean("fs.file.impl.disable.cache", true);
         conf.set(ReadSupport.PARQUET_READ_SCHEMA, """
             message ppd {
               optional int32 transfer_date (DATE);

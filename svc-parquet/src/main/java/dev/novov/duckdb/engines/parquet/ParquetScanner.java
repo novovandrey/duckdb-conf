@@ -46,8 +46,12 @@ final class ParquetScanner implements AutoCloseable {
         if (requestedColumns == null || requestedColumns.isEmpty()) {
             throw new IllegalArgumentException("At least one column must be requested");
         }
-        Configuration conf = new Configuration();
         Path path = new Path(file);
+        Configuration conf = new Configuration();
+        conf.setBoolean("parquet.filter.statistics.enabled", true);
+        conf.setBoolean("parquet.filter.dictionary.enabled", true);
+        conf.setBoolean("parquet.filter.columnindex.enabled", true);
+        conf.setBoolean("fs.file.impl.disable.cache", true);
         Projection projection = prepareProjection(path, conf, requestedColumns);
         conf.set(ReadSupport.PARQUET_READ_SCHEMA, projection.projectedSchema().toString());
         ParquetReader<Group> reader = ParquetReader.builder(new GroupReadSupport(), path)
