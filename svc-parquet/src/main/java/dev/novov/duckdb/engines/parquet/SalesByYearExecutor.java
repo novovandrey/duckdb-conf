@@ -12,10 +12,9 @@ import org.apache.hadoop.fs.Path;
 
 import java.time.LocalDate;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 
-public final class PpdSalesByYearExecutor {
+public final class SalesByYearExecutor {
 
     public CaseRun execute(GroupByYearCase query, RunConfig cfg) throws Exception {
         final String file = query.file();

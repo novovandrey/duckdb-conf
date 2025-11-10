@@ -19,7 +19,10 @@ public final class ParquetEngine implements AnalyticsEngine {
     private final GroupByExecutor groupByExecutor = new GroupByExecutor();
     private final FilterExecutor filterExecutor = new FilterExecutor();
     private final TopKExecutor topKExecutor = new TopKExecutor();
-    private final PpdSalesByYearExecutor ppdSalesByYear = new PpdSalesByYearExecutor();
+    private final SalesByYearExecutor salesByYear = new SalesByYearExecutor();
+    private final AvgByDistrictExecutor avgByDistrict = new AvgByDistrictExecutor();
+    private final NewVsOldExecutor newVsOld = new NewVsOldExecutor();
+    private final MedianByDistrictExecutor medianByDistrict = new MedianByDistrictExecutor();
 
     @Override
     public String name() {
@@ -47,10 +50,10 @@ public final class ParquetEngine implements AnalyticsEngine {
             case GroupByCase groupBy -> groupByExecutor.execute(groupBy, config);
             case FilterCase filter -> filterExecutor.execute(filter, config);
             case TopKCase topK -> topKExecutor.execute(topK, config);
-            case GroupByYearCase c -> ppdSalesByYear.execute(c, config);
-//            case PpdAvgByDistrictCase c -> ppdAvgByDistrict.execute(c, config);
-//            case PpdNewVsOldCase c -> ppdNewVsOld.execute(c, config);
-//            case PpdMedianByDistrictCase c -> ppdMedianByDistrict.execute(c, config);
+            case GroupByYearCase c -> salesByYear.execute(c, config);
+            case AvgByDistrictCase c -> avgByDistrict.execute(c, config);
+            case NewBuildVsOldCase c -> newVsOld.execute(c, config);
+            case MedianByDistrictCase c -> medianByDistrict.execute(c, config);
             case DescribeCase c -> throw new UnsupportedOperationException("Describe is DuckDB-only");
             case HeadCase c -> throw new UnsupportedOperationException("Head is DuckDB-only");
             default -> throw new IllegalStateException("Unexpected value: " + queryCase);

@@ -101,9 +101,9 @@ final class DuckdbSql {
                     """ + from + """
                     WHERE ppd_category = 'A'
                     GROUP BY district
-                    HAVING n > """ + medianByDistrictCase.minCount() + """
+                    HAVING n >\s""" + medianByDistrictCase.minCount() + """
                     ORDER BY median_price DESC
-                    LIMIT """ + medianByDistrictCase.limit();
+                    LIMIT\s""" + medianByDistrictCase.limit();
         }
         throw new IllegalArgumentException("Unsupported PPD case: " + queryCase.getClass().getName());
     }
