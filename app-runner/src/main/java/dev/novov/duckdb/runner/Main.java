@@ -48,6 +48,9 @@ public final class Main implements Runnable {
     private String toParquet;
 
     public static void main(String[] args) {
+        System.setProperty(
+                "org.slf4j.simpleLogger.log.org.apache.parquet.hadoop.InternalParquetRecordReader", "off"
+        );
         int exit = new CommandLine(new Main()).execute(args);
         System.exit(exit);
     }

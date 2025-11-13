@@ -14,6 +14,8 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
+import static dev.novov.duckdb.engines.parquet.JvmMemoryStats.collect;
+
 public final class SalesByYearExecutor {
 
     public CaseRun execute(GroupByYearCase query, RunConfig cfg) throws Exception {
@@ -57,7 +59,7 @@ public final class SalesByYearExecutor {
 
         final long rowsOut = byYear.size();
         final long nanos = System.nanoTime() - t0;
-        final long maxMem = currentUsedMemApprox();
+        final long maxMem = currentUsedMemApprox2();
 
         return new CaseRun(nanos, rowsOut, -1, maxMem);
     }
@@ -71,7 +73,6 @@ public final class SalesByYearExecutor {
 
     private static String optStr(Group g, String f) {
         return g.getFieldRepetitionCount(f) == 0 ? null : g.getBinary(f, 0).toStringUsingUTF8();
-        // NOTE: parquet-example Group API: getBinary(...).toStringUsingUTF8()
     }
 
     private static long optLong(Group g, String f, long def) {
@@ -85,5 +86,9 @@ public final class SalesByYearExecutor {
     private static long currentUsedMemApprox() {
         Runtime rt = Runtime.getRuntime();
         return rt.totalMemory() - rt.freeMemory();
+    }
+    private static long currentUsedMemApprox2() {
+        JvmMemoryStats.Stats rt = collect();
+        return rt.totalApproxAllocated();
     }
 }

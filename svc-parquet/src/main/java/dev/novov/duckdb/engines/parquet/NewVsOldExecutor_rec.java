@@ -6,24 +6,22 @@ import dev.novov.duckdb.bench.api.RunConfig;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.parquet.example.data.Group;
-import org.apache.parquet.filter2.compat.FilterCompat;
-import org.apache.parquet.filter2.predicate.FilterApi;
 import org.apache.parquet.hadoop.ParquetReader;
 import org.apache.parquet.hadoop.api.ReadSupport;
 import org.apache.parquet.hadoop.example.GroupReadSupport;
-import org.apache.parquet.io.api.Binary;
 
 import java.util.HashMap;
 import java.util.Map;
 
 import static dev.novov.duckdb.engines.parquet.JvmMemoryStats.collect;
 
-public final class NewVsOldExecutor {
+public final class NewVsOldExecutor_rec {
 
     public CaseRun execute(NewBuildVsOldCase query, RunConfig cfg) throws Exception {
         final String file = query.file();
         final long t0 = System.nanoTime();
 
+        // key: is_new_build (true/false)
         Map<Boolean, Agg> byIsNew = new HashMap<>(4);
 
         Configuration conf = new Configuration(false);
@@ -34,24 +32,17 @@ public final class NewVsOldExecutor {
               optional binary ppd_category (UTF8);
             }
             """);
-        conf.set("parquet.filter.columnindex.enabled", "false");
-        FilterCompat.Filter onlyA = FilterCompat.get(
-                FilterApi.eq(FilterApi.binaryColumn("ppd_category"), Binary.fromString("A"))
-        );
 
         long scanned = 0;
-        try (ParquetReader<Group> reader = ParquetReader
-                .builder(new GroupReadSupport(), new Path(file))
-                .withConf(conf)
-                .withFilter(onlyA)
-                .build()) {
-
+        try (ParquetReader<Group> reader = ParquetReader.builder(new GroupReadSupport(), new Path(file))
+                .withConf(conf).build()) {
             Group g;
             while ((g = reader.read()) != null) {
-                if (!isCharEq(g, "ppd_category", 'A')) continue;
+                final String cat = optStr(g, "ppd_category");
+                if (!"A".equals(cat)) continue;
 
-                final boolean isNew = isCharEq(g, "new_build", 'Y');
-
+                final String nb = optStr(g, "new_build");
+                final boolean isNew = "Y".equals(nb); // читаемая метка
                 final long price = optLong(g, "price", Long.MIN_VALUE);
                 if (price == Long.MIN_VALUE) continue;
 
@@ -62,20 +53,9 @@ public final class NewVsOldExecutor {
 
         final long rowsOut = byIsNew.size(); // 1..2
         final long nanos = System.nanoTime() - t0;
-        final long maxMem = collect().totalApproxAllocated();
+        final long maxMem = currentUsedMemApprox2();
 
         return new CaseRun(nanos, rowsOut, -1, maxMem);
-    }
-
-    private static boolean isCharEq(Group g, String f, char ch) {
-        if (g.getFieldRepetitionCount(f) == 0) return false;
-        Binary b = g.getBinary(f, 0);
-        if (b.length() != 1) return false;
-        return b.getBytes()[0] == (byte) ch;
-    }
-
-    private static long optLong(Group g, String f, long def) {
-        return g.getFieldRepetitionCount(f) == 0 ? def : g.getLong(f, 0);
     }
 
     private static final class Agg {
@@ -83,5 +63,22 @@ public final class NewVsOldExecutor {
         long sum;
         void add(long p) { n++; sum += p; }
         double avg() { return n == 0 ? 0.0 : (double) sum / n; }
+    }
+
+    private static String optStr(Group g, String f) {
+        return g.getFieldRepetitionCount(f) == 0 ? null : g.getBinary(f, 0).toStringUsingUTF8();
+    }
+
+    private static long optLong(Group g, String f, long def) {
+        return g.getFieldRepetitionCount(f) == 0 ? def : g.getLong(f, 0);
+    }
+
+    private static long currentUsedMemApprox() {
+        Runtime rt = Runtime.getRuntime();
+        return rt.totalMemory() - rt.freeMemory();
+    }
+    private static long currentUsedMemApprox2() {
+        JvmMemoryStats.Stats rt = collect();
+        return rt.totalApproxAllocated();
     }
 }

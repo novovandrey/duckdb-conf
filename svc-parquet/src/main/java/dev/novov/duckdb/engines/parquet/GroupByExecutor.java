@@ -41,6 +41,7 @@ final class GroupByExecutor {
         long rowsOut = counts.size();
         long deltaMem = Math.max(0L, after - before);
 
+        long deltaMem2 = MemoryUtil.sampleUsedBytesV2();
         if (groupByCase.aggFn() == AggFn.AVG) {
             // Force evaluation to mimic the cost of producing output rows.
             counts.object2LongEntrySet().fastForEach(entry -> {
@@ -53,6 +54,6 @@ final class GroupByExecutor {
             });
         }
 
-        return new CaseRun(stopwatch.elapsedNanos(), rowsOut, -1L, deltaMem);
+        return new CaseRun(stopwatch.elapsedNanos(), rowsOut, -1L, deltaMem2);
     }
 }

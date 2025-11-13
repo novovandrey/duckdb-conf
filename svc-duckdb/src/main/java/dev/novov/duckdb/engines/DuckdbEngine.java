@@ -130,8 +130,8 @@ public final class DuckdbEngine implements AnalyticsEngine {
         if (explainOutput != null && explainOutput.length() > 0) {
             LOGGER.info("[duckdb] EXPLAIN ANALYZE for {}:{}{}", caseId, System.lineSeparator(), explainOutput);
         }
-        long maxUsed = Math.max(before, after);
-        return new CaseRun(stopwatch.elapsedNanos(), rows, -1L, maxUsed);
+        long deltaMem2 = MemoryUtil.sampleUsedBytesV2();
+        return new CaseRun(stopwatch.elapsedNanos(), rows, -1L, deltaMem2);
     }
 
     private static long consumeResultSet(ResultSet rs, StringBuilder explainOutput) throws SQLException {
