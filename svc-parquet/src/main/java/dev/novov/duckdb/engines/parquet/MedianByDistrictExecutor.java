@@ -20,7 +20,6 @@ public class MedianByDistrictExecutor {
         final int limit = query.limit();
         final long t0 = System.nanoTime();
 
-        // ------------ Pass 1: counts per district ------------
         Map<String, Long> counts = new HashMap<>(1 << 14);
 
         Configuration conf1 = new Configuration(false);
@@ -49,13 +48,11 @@ public class MedianByDistrictExecutor {
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toSet());
         if (heavy.isEmpty()) {
-            // ничего не прошло порог
             final long nanos = System.nanoTime() - t0;
             final long maxMem = currentUsedMemApprox();
             return new CaseRun(nanos, 0, -1, maxMem);
         }
 
-        // ------------ Pass 2: collect prices for heavy districts ------------
         Map<String, List<Long>> prices = new HashMap<>(heavy.size() * 2);
 
         Configuration conf2 = new Configuration(false);
@@ -104,7 +101,6 @@ public class MedianByDistrictExecutor {
     }
 
     private static long medianInPlace(List<Long> a) {
-        // Неблокирующая медиана: сортировка + центральный элемент/среднее пары
         a.sort(Long::compare);
         int n = a.size();
         if (n % 2 == 1) return a.get(n / 2);

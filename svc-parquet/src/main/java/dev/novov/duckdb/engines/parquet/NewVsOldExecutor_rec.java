@@ -42,7 +42,7 @@ public final class NewVsOldExecutor_rec {
                 if (!"A".equals(cat)) continue;
 
                 final String nb = optStr(g, "new_build");
-                final boolean isNew = "Y".equals(nb); // читаемая метка
+                final boolean isNew = "Y".equals(nb);
                 final long price = optLong(g, "price", Long.MIN_VALUE);
                 if (price == Long.MIN_VALUE) continue;
 
