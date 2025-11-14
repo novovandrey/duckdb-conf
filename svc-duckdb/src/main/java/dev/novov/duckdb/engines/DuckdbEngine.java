@@ -1,5 +1,6 @@
 package dev.novov.duckdb.engines;
 
+import dev.novov.duckdb.bench.DuckDBMemoryMeter;
 import dev.novov.duckdb.bench.api.AnalyticsEngine;
 import dev.novov.duckdb.bench.api.CaseResult;
 import dev.novov.duckdb.bench.api.CaseRun;
@@ -23,6 +24,9 @@ import java.sql.Statement;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
+
+import static dev.novov.duckdb.bench.DuckDBMemoryMeter.measurePeakDuring;
 
 public final class DuckdbEngine implements AnalyticsEngine {
     private static final Logger LOGGER = LoggerFactory.getLogger(DuckdbEngine.class);
@@ -111,27 +115,40 @@ public final class DuckdbEngine implements AnalyticsEngine {
 
     private CaseRun executeOnce(Connection connection, String sql, boolean capturePlan, String caseId) throws SQLException {
         Stopwatch stopwatch = Stopwatch.createStarted();
-        long before = MemoryUtil.sampleUsedBytes();
-        long rows = 0L;
-        StringBuilder explainOutput = capturePlan ? new StringBuilder() : null;
+        DuckDBMemoryMeter.Result resMemo ;
+        AtomicLong rows = new AtomicLong(0L);
+        try {
+            resMemo = measurePeakDuring(() -> {
+                try {
+                    long before = MemoryUtil.sampleUsedBytes();
 
-        try (Statement statement = connection.createStatement()) {
-            boolean hasResult = statement.execute(sql);
-            while (hasResult) {
-                try (ResultSet rs = statement.getResultSet()) {
-                    rows += consumeResultSet(rs, explainOutput);
+                    StringBuilder explainOutput = capturePlan ? new StringBuilder() : null;
+
+                    try (Statement statement = connection.createStatement()) {
+                        boolean hasResult = statement.execute(sql);
+                        while (hasResult) {
+                            try (ResultSet rs = statement.getResultSet()) {
+                                rows.addAndGet(consumeResultSet(rs, explainOutput));
+                            }
+                            hasResult = statement.getMoreResults();
+                        }
+                    }
+
+                    stopwatch.stop();
+                    long after = MemoryUtil.sampleUsedBytes();
+                    if (explainOutput != null && explainOutput.length() > 0) {
+                        LOGGER.info("[duckdb] EXPLAIN ANALYZE for {}:{}{}", caseId, System.lineSeparator(), explainOutput);
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
                 }
-                hasResult = statement.getMoreResults();
-            }
+            }, Duration.ofMillis(50));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
 
-        stopwatch.stop();
-        long after = MemoryUtil.sampleUsedBytes();
-        if (explainOutput != null && explainOutput.length() > 0) {
-            LOGGER.info("[duckdb] EXPLAIN ANALYZE for {}:{}{}", caseId, System.lineSeparator(), explainOutput);
-        }
         long deltaMem2 = MemoryUtil.sampleUsedBytesV2();
-        return new CaseRun(stopwatch.elapsedNanos(), rows, -1L, deltaMem2);
+        return new CaseRun(stopwatch.elapsedNanos(), rows.get(), -1L, resMemo.peakRss());
     }
 
     private static long consumeResultSet(ResultSet rs, StringBuilder explainOutput) throws SQLException {
