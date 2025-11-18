@@ -6,6 +6,7 @@ public record RunConfig(
         int threads,
         long limitRowsOrMinusOne,
         boolean explain,
+        boolean explainHtml,
         boolean coldJVM
 ) {
     public RunConfig {

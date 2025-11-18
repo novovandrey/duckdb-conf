@@ -60,6 +60,7 @@ final class BenchRunner {
                 options.threads(),
                 options.limitRows(),
                 options.explain(),
+                options.explainHtml(),
                 false
         );
 
@@ -83,6 +84,7 @@ final class BenchRunner {
                 options.threads(),
                 options.limitRows(),
                 options.explain(),
+                options.explainHtml(),
                 false
         );
         new DuckdbEngine().runInteractive(queryCase, config);

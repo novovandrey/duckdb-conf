@@ -9,6 +9,7 @@ record RunnerOptions(
         int warmups,
         int runs,
         boolean explain,
+        boolean explainHtml,
         long limitRows,
         boolean schemaOnly,
         int headLimit,

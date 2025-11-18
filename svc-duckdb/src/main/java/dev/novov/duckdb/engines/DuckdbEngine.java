@@ -78,7 +78,7 @@ public final class DuckdbEngine implements AnalyticsEngine {
     }
 
     public void csvToParquet(String csvFileOrUrl, String outParquet, int threads) throws SQLException {
-        RunConfig config = new RunConfig(0, 1, threads, -1, false, false);
+        RunConfig config = new RunConfig(0, 1, threads, -1, false,false, false);
         try (Connection connection = DriverManager.getConnection("jdbc:duckdb:")) {
             configureConnection(connection, config);
             csvToParquet(connection, csvFileOrUrl, outParquet);
@@ -108,7 +108,8 @@ public final class DuckdbEngine implements AnalyticsEngine {
             }
             if (config.explain()) {
                 statement.execute("PRAGMA enable_profiling = 'json'");
-                statement.execute("PRAGMA profiling_output = 'duck_profile.json'");
+                statement.execute("PRAGMA profiling_mode = 'detailed'");
+                statement.execute("PRAGMA profiling_output = 'C:\\Users\\Andrei\\IdeaProjects\\duckdb-conf\\duck_profile.json'");
             }
         }
     }

@@ -19,6 +19,9 @@ final class DuckdbSql {
         if (config.explain()) {
             core = "EXPLAIN ANALYZE " + core;
         }
+        if (config.explainHtml()) {
+            core = "EXPLAIN (FORMAT html) " + core;
+        }
         return core;
     }
 

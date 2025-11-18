@@ -35,6 +35,9 @@ public final class Main implements Runnable {
     @CommandLine.Option(names = "--explain", description = "Emit DuckDB EXPLAIN ANALYZE output")
     private boolean explain;
 
+    @CommandLine.Option(names = "--explainHtml", description = "Emit DuckDB EXPLAIN HTML output")
+    private boolean explainHtml;
+
     @CommandLine.Option(names = "--limitRows", description = "Limit rows processed (default unlimited)", defaultValue = "-1")
     private long limitRows;
 
@@ -100,6 +103,7 @@ public final class Main implements Runnable {
                 warmups,
                 runs,
                 explain,
+                explainHtml,
                 limitRows,
                 schemaOnly,
                 head,
