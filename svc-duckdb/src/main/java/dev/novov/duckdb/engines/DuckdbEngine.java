@@ -25,6 +25,9 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static dev.novov.duckdb.bench.DuckDBMemoryMeter.measurePeakDuring;
 
@@ -45,7 +48,7 @@ public final class DuckdbEngine implements AnalyticsEngine {
             LOGGER.info("[duckdb] Case {} SQL:{}{}", queryCase.id(), System.lineSeparator(), sql);
 
             for (int i = 0; i < config.warmupRuns(); i++) {
-                executeOnce(connection, sql, config.explain(), queryCase.id());
+                executeOnce(connection, sql, config.explain(), config.explainHtml(), queryCase.id());
             }
 
             List<CaseRun> runs = new ArrayList<>(config.measuredRuns());
@@ -53,7 +56,7 @@ public final class DuckdbEngine implements AnalyticsEngine {
                 if (config.coldJVM()) {
                     GC.requestGc(GC_PAUSE);
                 }
-                runs.add(executeOnce(connection, sql, config.explain(), queryCase.id()));
+                runs.add(executeOnce(connection, sql, config.explain(), config.explainHtml(), queryCase.id()));
             }
 
             return new CaseResult(queryCase, name(), runs);
@@ -114,7 +117,7 @@ public final class DuckdbEngine implements AnalyticsEngine {
         }
     }
 
-    private CaseRun executeOnce(Connection connection, String sql, boolean capturePlan, String caseId) throws SQLException {
+    private CaseRun executeOnce(Connection connection, String sql, boolean capturePlan, boolean captureHtml, String caseId) throws SQLException {
         Stopwatch stopwatch = Stopwatch.createStarted();
         DuckDBMemoryMeter.Result resMemo ;
         AtomicLong rows = new AtomicLong(0L);
@@ -123,7 +126,7 @@ public final class DuckdbEngine implements AnalyticsEngine {
                 try {
                     long before = MemoryUtil.sampleUsedBytes();
 
-                    StringBuilder explainOutput = capturePlan ? new StringBuilder() : null;
+                    StringBuilder explainOutput = (capturePlan || captureHtml) ? new StringBuilder() : null;
 
                     try (Statement statement = connection.createStatement()) {
                         boolean hasResult = statement.execute(sql);
@@ -138,7 +141,11 @@ public final class DuckdbEngine implements AnalyticsEngine {
                     stopwatch.stop();
                     long after = MemoryUtil.sampleUsedBytes();
                     if (explainOutput != null && explainOutput.length() > 0) {
-                        LOGGER.info("[duckdb] EXPLAIN ANALYZE for {}:{}{}", caseId, System.lineSeparator(), explainOutput);
+                        if (captureHtml) {
+                            writeExplainHtml(caseId, explainOutput.toString());
+                        } else {
+                            LOGGER.info("[duckdb] EXPLAIN ANALYZE for {}:{}{}", caseId, System.lineSeparator(), explainOutput);
+                        }
                     }
                 } catch (Exception e) {
                     throw new RuntimeException(e);
@@ -150,6 +157,16 @@ public final class DuckdbEngine implements AnalyticsEngine {
 
         long deltaMem2 = MemoryUtil.sampleUsedBytesV2();
         return new CaseRun(stopwatch.elapsedNanos(), rows.get(), -1L, resMemo.peakRss());
+    }
+
+    private void writeExplainHtml(String caseId, String html) {
+        try {
+            Path out = Path.of("duck_explain_" + caseId + ".html");
+            Files.writeString(out, html, StandardCharsets.UTF_8);
+            LOGGER.info("[duckdb] EXPLAIN HTML written to {}", out.toAbsolutePath());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to write EXPLAIN HTML", e);
+        }
     }
 
     private static long consumeResultSet(ResultSet rs, StringBuilder explainOutput) throws SQLException {

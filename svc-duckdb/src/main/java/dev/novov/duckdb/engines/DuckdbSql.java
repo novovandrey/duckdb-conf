@@ -115,14 +115,16 @@ final class DuckdbSql {
                 throw new IllegalArgumentException("Missing district CSV for cross_source_join. Set DUCKDB_DEMO_DISTRICT_CSV");
             }
             String dimFrom = "read_csv_auto('" + dimFile.replace("'", "''") + "')";
-            return """
+            return String.format("""
                     WITH sales AS (
-                        SELECT district, postcode, price, transfer_date
-                    """ + from + """
+                        SELECT %s AS join_key, price, transfer_date
+                    %s
                         WHERE ppd_category = 'A'
                     ), districts AS (
-                        SELECT district, region, population_band
-                        FROM """ + dimFrom + """
+                        SELECT %s AS join_key,
+                               %s AS region,
+                               %s AS population_band
+                        FROM %s
                     )
                     SELECT d.region,
                            d.population_band,
@@ -130,11 +132,17 @@ final class DuckdbSql {
                            ROUND(AVG(s.price)) AS avg_price,
                            quantile_cont(s.price, 0.5) AS median_price
                     FROM sales s
-                    JOIN districts d USING (district)
+                    JOIN districts d USING (join_key)
                     GROUP BY d.region, d.population_band
                     ORDER BY median_price DESC
                     LIMIT 20
-                    """;
+                    """,
+                    ident("district"),
+                    from,
+                    ident("wdstl05cd"),
+                    ident("dointr"),
+                    ident("doterm"),
+                    dimFrom);
         }
         throw new IllegalArgumentException("Unsupported PPD case: " + queryCase.getClass().getName());
     }

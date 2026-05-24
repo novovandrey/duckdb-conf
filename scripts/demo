@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 JAR_PATH="${ROOT_DIR}/app-runner/target/app-runner-1.0-SNAPSHOT.jar"
+JAVA_CMD="${JAVA21_BIN:-java}"
 
 alias_name="${1:-}"
 if [[ -z "${alias_name}" ]]; then
@@ -36,7 +37,7 @@ PPD_PARQUET="$(pick_parquet)"
 require_env "DUCKDB_DEMO_DISTRICT_CSV"
 
 run_java() {
-  java -jar "${JAR_PATH}" "$@"
+  "${JAVA_CMD}" -jar "${JAR_PATH}" "$@"
 }
 
 case "${alias_name}" in

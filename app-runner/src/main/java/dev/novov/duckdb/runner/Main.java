@@ -57,6 +57,9 @@ public final class Main implements Runnable {
         System.setProperty(
                 "org.slf4j.simpleLogger.log.org.apache.parquet.hadoop.InternalParquetRecordReader", "off"
         );
+        System.setProperty(
+                "org.slf4j.simpleLogger.log.org.apache.hadoop.io.compress.CodecPool", "error"
+        );
         int exit = new CommandLine(new Main()).execute(args);
         System.exit(exit);
     }

@@ -3,6 +3,11 @@ setlocal enabledelayedexpansion
 
 set "ROOT_DIR=%~dp0.."
 set "JAR_PATH=%ROOT_DIR%\app-runner\target\app-runner-1.0-SNAPSHOT.jar"
+if "%JAVA21_BIN%"=="" (
+  set "JAVA_CMD=java"
+) else (
+  set "JAVA_CMD=%JAVA21_BIN%"
+)
 set "ALIAS=%~1"
 
 if "%ALIAS%"=="" (
@@ -44,21 +49,21 @@ echo Unknown alias: %ALIAS%
 exit /b 1
 
 :demo1
-java -jar "%JAR_PATH%" --demo --engine duckdb --dataset ppd --case ppd_median_by_district --file "%PPD_PARQUET%" --threads 8 --warmup 0 --runs 1
+"%JAVA_CMD%" -jar "%JAR_PATH%" --demo --engine duckdb --dataset ppd --case ppd_median_by_district --file "%PPD_PARQUET%" --threads 8 --warmup 0 --runs 1
 exit /b %errorlevel%
 
 :demo2
-java -jar "%JAR_PATH%" --demo --engine both --dataset ppd --case ppd_new_vs_old --file "%PPD_PARQUET%" --threads 8 --warmup 0 --runs 1
+"%JAVA_CMD%" -jar "%JAR_PATH%" --demo --engine both --dataset ppd --case ppd_new_vs_old --file "%PPD_PARQUET%" --threads 8 --warmup 0 --runs 1
 exit /b %errorlevel%
 
 :demo3
-java -jar "%JAR_PATH%" --demo --engine duckdb --dataset ppd --case cross_source_join --file "%PPD_PARQUET%" --threads 8 --warmup 0 --runs 1
+"%JAVA_CMD%" -jar "%JAR_PATH%" --demo --engine duckdb --dataset ppd --case cross_source_join --file "%PPD_PARQUET%" --threads 8 --warmup 0 --runs 1
 exit /b %errorlevel%
 
 :demo4
-java -jar "%JAR_PATH%" --demo --engine duckdb --dataset ppd --case ppd_sales_by_year --file "%PPD_PARQUET%" --threads 1 --warmup 0 --runs 1
+"%JAVA_CMD%" -jar "%JAR_PATH%" --demo --engine duckdb --dataset ppd --case ppd_sales_by_year --file "%PPD_PARQUET%" --threads 1 --warmup 0 --runs 1
 if errorlevel 1 exit /b %errorlevel%
-java -jar "%JAR_PATH%" --demo --engine duckdb --dataset ppd --case ppd_sales_by_year --file "%PPD_PARQUET%" --threads 8 --warmup 0 --runs 1
+"%JAVA_CMD%" -jar "%JAR_PATH%" --demo --engine duckdb --dataset ppd --case ppd_sales_by_year --file "%PPD_PARQUET%" --threads 8 --warmup 0 --runs 1
 exit /b %errorlevel%
 
 :demo5
@@ -71,7 +76,7 @@ if "%DUCKDB_DEMO_PPD_PARQUET_SMALL%"=="" (
 ) else (
   set "OUT=%DUCKDB_DEMO_PPD_PARQUET_SMALL%"
 )
-java -jar "%JAR_PATH%" --engine duckdb --dataset ppd --file "%DUCKDB_DEMO_PPD_CSV%" --to-parquet "%OUT%" --threads 8
+"%JAVA_CMD%" -jar "%JAR_PATH%" --engine duckdb --dataset ppd --file "%DUCKDB_DEMO_PPD_CSV%" --to-parquet "%OUT%" --threads 8
 if errorlevel 1 exit /b %errorlevel%
-java -jar "%JAR_PATH%" --demo --engine duckdb --dataset ppd --case ppd_avg_by_district --file "%OUT%" --threads 8 --warmup 0 --runs 1
+"%JAVA_CMD%" -jar "%JAR_PATH%" --demo --engine duckdb --dataset ppd --case ppd_avg_by_district --file "%OUT%" --threads 8 --warmup 0 --runs 1
 exit /b %errorlevel%
