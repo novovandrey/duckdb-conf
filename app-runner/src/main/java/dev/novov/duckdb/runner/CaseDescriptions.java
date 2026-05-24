@@ -8,11 +8,11 @@ import dev.novov.duckdb.bench.api.HeadCase;
 import dev.novov.duckdb.bench.api.MedianByDistrictCase;
 import dev.novov.duckdb.bench.api.NewBuildVsOldCase;
 
-final class CaseDescriptions {
+public final class CaseDescriptions {
     private CaseDescriptions() {
     }
 
-    static String describe(QueryCase queryCase) {
+    public static String describe(QueryCase queryCase) {
         return switch (queryCase) {
             case GroupByCase groupBy -> "group=" + groupBy.groupCol() + ", agg=" + groupBy.aggFn()
                     + "(" + groupBy.aggCol() + ")";
@@ -26,6 +26,7 @@ final class CaseDescriptions {
             case NewBuildVsOldCase ignored -> "new build vs old (ppd_category='A')";
             case MedianByDistrictCase median -> "median price by district, minCount=" + median.minCount()
                     + ", limit=" + median.limit();
+            case CrossSourceJoinCase joinCase -> "join parquet with csv metadata: " + joinCase.districtCsv();
         };
     }
 }

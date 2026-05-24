@@ -54,6 +54,7 @@ public final class ParquetEngine implements AnalyticsEngine {
             case AvgByDistrictCase c -> avgByDistrict.execute(c, config);
             case NewBuildVsOldCase c -> newVsOld.execute(c, config);
             case MedianByDistrictCase c -> medianByDistrict.execute(c, config);
+            case CrossSourceJoinCase c -> throw new UnsupportedOperationException("Cross-source join is DuckDB-only");
             case DescribeCase c -> throw new UnsupportedOperationException("Describe is DuckDB-only");
             case HeadCase c -> throw new UnsupportedOperationException("Head is DuckDB-only");
             default -> throw new IllegalStateException("Unexpected value: " + queryCase);

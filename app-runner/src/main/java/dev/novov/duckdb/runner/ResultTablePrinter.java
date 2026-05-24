@@ -8,11 +8,11 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 
-final class ResultTablePrinter {
+public final class ResultTablePrinter {
     private ResultTablePrinter() {
     }
 
-    static void print(List<BenchRunner.BenchResult> results, int warmups, int runs) {
+    public static void print(List<BenchRunner.BenchResult> results, int warmups, int runs) {
         if (results.isEmpty()) {
             System.out.println("No results to display");
             return;

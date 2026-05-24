@@ -8,19 +8,22 @@ import dev.novov.duckdb.bench.api.QueryCase;
 import dev.novov.duckdb.bench.api.RunConfig;
 import dev.novov.duckdb.bench.util.Stopwatch;
 import dev.novov.duckdb.engines.DuckdbEngine;
+import dev.novov.duckdb.runner.output.DemoRunnerOutput;
+import dev.novov.duckdb.runner.output.PlainRunnerOutput;
+import dev.novov.duckdb.runner.output.RunnerOutput;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.stream.Collectors;
 
-final class BenchRunner {
+public final class BenchRunner {
     private final EngineFactory engineFactory = new EngineFactory();
     private final CaseSelector caseSelector = new CaseSelector();
 
     void run(RunnerOptions options) throws Exception {
+        RunnerOutput output = options.demoMode() ? new DemoRunnerOutput() : new PlainRunnerOutput();
         if (options.toParquet() != null) {
-            runCsvToParquet(options);
+            runCsvToParquet(options, output);
             return;
         }
         if (options.schemaOnly()) {
@@ -39,7 +42,7 @@ final class BenchRunner {
 //        }
 
         if (options.engineOption().includesParquet() && isCsv(options.file())) {
-            System.err.println("Parquet engine cannot read CSV input directly. Run --to-parquet first.");
+            output.printError("Parquet engine cannot read CSV input directly. Run --to-parquet first.");
             throw new IllegalStateException("CSV input not supported by Parquet engine");
         }
 
@@ -48,11 +51,7 @@ final class BenchRunner {
             throw new IllegalStateException("No cases selected");
         }
         List<AnalyticsEngine> engines = engineFactory.create(options.engineOption());
-        System.out.println("Dataset=" + options.datasetOption());
-        System.out.println("Engines: " + engines.stream().map(AnalyticsEngine::name).collect(Collectors.joining(", ")));
-        System.out.printf("Threads=%d warmup=%d runs=%d limitRows=%d explain=%b%n",
-                options.threads(), options.warmups(), options.runs(), options.limitRows(), options.explain());
-        cases.forEach(queryCase -> System.out.println("Case " + queryCase.id() + " -> " + CaseDescriptions.describe(queryCase)));
+        output.printRunHeader(options, cases, engines);
 
         RunConfig config = new RunConfig(
                 options.warmups(),
@@ -67,13 +66,14 @@ final class BenchRunner {
         List<BenchResult> results = new ArrayList<>();
         for (QueryCase queryCase : cases) {
             for (AnalyticsEngine engine : engines) {
-                System.out.printf("Running %s on %s...%n", queryCase.id(), engine.name());
+                output.printCaseStarted(queryCase, engine);
                 CaseResult result = engine.run(queryCase, config);
                 results.add(new BenchResult(queryCase, engine.name(), result));
+                output.printCaseFinished(queryCase, engine.name(), result);
             }
         }
 
-        ResultTablePrinter.print(results, options.warmups(), options.runs());
+        output.printRunFinished(results, options.warmups(), options.runs());
     }
 
     private void runInteractive(RunnerOptions options, QueryCase queryCase) throws Exception {
@@ -90,17 +90,17 @@ final class BenchRunner {
         new DuckdbEngine().runInteractive(queryCase, config);
     }
 
-    private void runCsvToParquet(RunnerOptions options) throws Exception {
+    private void runCsvToParquet(RunnerOptions options, RunnerOutput output) throws Exception {
         ensureDuckdbEngine(options.engineOption());
         String out = options.toParquet();
         if (out == null || out.isBlank()) {
             throw new IllegalArgumentException("--to-parquet requires an output file path");
         }
-        System.out.printf("Converting %s -> %s ...%n", options.file(), out);
+        output.printInfo("Converting " + options.file() + " -> " + out + " ...");
         Stopwatch stopwatch = Stopwatch.createStarted();
         new DuckdbEngine().csvToParquet(options.file(), out, options.threads());
         stopwatch.stop();
-        System.out.printf("Parquet written to %s in %d ms%n", out, stopwatch.elapsedMillis());
+        output.printInfo("Parquet written to " + out + " in " + stopwatch.elapsedMillis() + " ms");
     }
 
     private static void ensureDuckdbEngine(EngineOption engineOption) {
@@ -113,6 +113,6 @@ final class BenchRunner {
         return file != null && file.toLowerCase(Locale.ROOT).endsWith(".csv");
     }
 
-    record BenchResult(QueryCase queryCase, String engine, CaseResult result) {
+    public record BenchResult(QueryCase queryCase, String engine, CaseResult result) {
     }
 }

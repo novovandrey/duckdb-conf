@@ -26,6 +26,9 @@ public final class Main implements Runnable {
     @CommandLine.Option(names = "--threads", description = "Worker threads", defaultValue = "0")
     private int threads;
 
+    @CommandLine.Option(names = "--demo", description = "Enable conference-friendly demo output")
+    private boolean demoMode;
+
     @CommandLine.Option(names = "--warmup", description = "Warmup runs", defaultValue = "1")
     private int warmups;
 
@@ -99,6 +102,7 @@ public final class Main implements Runnable {
                 dataset,
                 caseFilter,
                 file,
+                demoMode,
                 resolvedThreads,
                 warmups,
                 runs,

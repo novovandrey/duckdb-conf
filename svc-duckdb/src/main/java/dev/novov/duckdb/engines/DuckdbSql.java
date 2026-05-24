@@ -47,7 +47,8 @@ final class DuckdbSql {
                 || queryCase instanceof GroupByYearCase
                 || queryCase instanceof AvgByDistrictCase
                 || queryCase instanceof NewBuildVsOldCase
-                || queryCase instanceof MedianByDistrictCase;
+                || queryCase instanceof MedianByDistrictCase
+                || queryCase instanceof CrossSourceJoinCase;
     }
 
     private static String buildPpd(QueryCase queryCase) {
@@ -108,6 +109,33 @@ final class DuckdbSql {
                     ORDER BY median_price DESC
                     LIMIT\s""" + medianByDistrictCase.limit();
         }
+        if (queryCase instanceof CrossSourceJoinCase crossSourceJoinCase) {
+            String dimFile = Paths2.normalizePathOrUrl(crossSourceJoinCase.districtCsv());
+            if (dimFile.isBlank()) {
+                throw new IllegalArgumentException("Missing district CSV for cross_source_join. Set DUCKDB_DEMO_DISTRICT_CSV");
+            }
+            String dimFrom = "read_csv_auto('" + dimFile.replace("'", "''") + "')";
+            return """
+                    WITH sales AS (
+                        SELECT district, postcode, price, transfer_date
+                    """ + from + """
+                        WHERE ppd_category = 'A'
+                    ), districts AS (
+                        SELECT district, region, population_band
+                        FROM """ + dimFrom + """
+                    )
+                    SELECT d.region,
+                           d.population_band,
+                           COUNT(*) AS sales,
+                           ROUND(AVG(s.price)) AS avg_price,
+                           quantile_cont(s.price, 0.5) AS median_price
+                    FROM sales s
+                    JOIN districts d USING (district)
+                    GROUP BY d.region, d.population_band
+                    ORDER BY median_price DESC
+                    LIMIT 20
+                    """;
+        }
         throw new IllegalArgumentException("Unsupported PPD case: " + queryCase.getClass().getName());
     }
 
@@ -129,6 +157,9 @@ final class DuckdbSql {
         }
         if (queryCase instanceof MedianByDistrictCase medianByDistrictCase) {
             return medianByDistrictCase.file();
+        }
+        if (queryCase instanceof CrossSourceJoinCase crossSourceJoinCase) {
+            return crossSourceJoinCase.factParquet();
         }
         throw new IllegalArgumentException("Unsupported PPD case: " + queryCase.getClass().getName());
     }

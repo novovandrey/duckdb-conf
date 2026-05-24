@@ -1,10 +1,11 @@
 package dev.novov.duckdb.runner;
 
-record RunnerOptions(
+public record RunnerOptions(
         EngineOption engineOption,
         DatasetOption datasetOption,
         String caseFilter,
         String file,
+        boolean demoMode,
         int threads,
         int warmups,
         int runs,

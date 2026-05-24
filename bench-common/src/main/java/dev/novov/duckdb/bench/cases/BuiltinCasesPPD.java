@@ -17,7 +17,13 @@ public final class BuiltinCasesPPD {
                 new GroupByYearCase("ppd_sales_by_year", file),
                 new AvgByDistrictCase("ppd_avg_by_district", file, 1_000),
                 new NewBuildVsOldCase("ppd_new_vs_old", file),
-                new MedianByDistrictCase("ppd_median_by_district", file, 1_000, 20)
+                new MedianByDistrictCase("ppd_median_by_district", file, 1_000, 20),
+                new CrossSourceJoinCase("cross_source_join", file, districtCsvPath())
         );
+    }
+
+    private static String districtCsvPath() {
+        String value = System.getenv("DUCKDB_DEMO_DISTRICT_CSV");
+        return value == null ? "" : value;
     }
 }
